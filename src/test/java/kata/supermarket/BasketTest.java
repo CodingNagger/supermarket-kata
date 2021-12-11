@@ -1,5 +1,7 @@
 package kata.supermarket;
 
+import kata.supermarket.offer.Offer;
+import kata.supermarket.offer.OfferService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -8,19 +10,40 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.stream.Stream;
 
+import static kata.supermarket.TestFixture.aPackOfDigestives;
+import static kata.supermarket.TestFixture.aPintOfMilk;
+import static kata.supermarket.TestFixture.getSeventyFivePercentOffMilkAndDigestivesOffer;
+import static kata.supermarket.TestFixture.twoFiftyGramsOfAmericanSweets;
+import static kata.supermarket.TestFixture.twoHundredGramsOfPickAndMix;
+import static kata.supermarket.TestFixture.twoPintsOfMilkForOneOffer;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BasketTest {
-
-    @DisplayName("basket provides its total value when containing...")
-    @MethodSource
-    @ParameterizedTest(name = "{0}")
-    void basketProvidesTotalValue(String description, String expectedTotal, Iterable<Item> items) {
-        final Basket basket = new Basket();
-        items.forEach(basket::add);
-        assertEquals(new BigDecimal(expectedTotal), basket.total());
+    static Stream<Arguments> basketProvidesTotalValueForMilkAndDigestivesOfferScenario() {
+        return Stream.of(
+                Arguments.arguments(
+                        "no offer available",
+                        "4.68",
+                        Collections.emptyList()),
+                Arguments.arguments(
+                        "milk and cookies offer available",
+                        "1.62",
+                        Collections.singletonList(getSeventyFivePercentOffMilkAndDigestivesOffer())),
+                Arguments.arguments(
+                        "multiple milk related offers available",
+                        "1.62",
+                        Arrays.asList(
+                                getSeventyFivePercentOffMilkAndDigestivesOffer(),
+                                twoPintsOfMilkForOneOffer())),
+                Arguments.arguments(
+                        "two pints of milk for one offer only",
+                        "4.19",
+                        Collections.singletonList(twoPintsOfMilkForOneOffer()))
+        );
     }
 
     static Stream<Arguments> basketProvidesTotalValue() {
@@ -56,27 +79,25 @@ class BasketTest {
         return Arguments.of("no items", "0.00", Collections.emptyList());
     }
 
-    private static Item aPintOfMilk() {
-        return new Product(new BigDecimal("0.49")).oneOf();
+    @DisplayName("basket provides its total value when containing...")
+    @MethodSource("basketProvidesTotalValue")
+    @ParameterizedTest(name = "{0}")
+    void basketProvidesTotalValue(String description, String expectedTotal, Iterable<Item> items) {
+        final Basket basket = new Basket();
+        items.forEach(basket::add);
+        assertEquals(new BigDecimal(expectedTotal), basket.total());
     }
 
-    private static Item aPackOfDigestives() {
-        return new Product(new BigDecimal("1.55")).oneOf();
-    }
+    @DisplayName("basket provides its total value when containing...")
+    @MethodSource("basketProvidesTotalValueForMilkAndDigestivesOfferScenario")
+    @ParameterizedTest(name = "{0}")
+    void total_shouldReturnExpectedAmount_forGivenOffers(String description, String expectedTotal, List<Offer> offers) {
+        final Basket basket = new Basket(new OfferService(offers));
 
-    private static WeighedProduct aKiloOfAmericanSweets() {
-        return new WeighedProduct(new BigDecimal("4.99"));
-    }
+        basket.add(aPackOfDigestives().withQuantity(BigDecimal.valueOf(2)));
+        basket.add(aPintOfMilk().withQuantity(BigDecimal.valueOf(2)));
+        basket.add(twoHundredGramsOfPickAndMix());
 
-    private static Item twoFiftyGramsOfAmericanSweets() {
-        return aKiloOfAmericanSweets().weighing(new BigDecimal(".25"));
-    }
-
-    private static WeighedProduct aKiloOfPickAndMix() {
-        return new WeighedProduct(new BigDecimal("2.99"));
-    }
-
-    private static Item twoHundredGramsOfPickAndMix() {
-        return aKiloOfPickAndMix().weighing(new BigDecimal(".2"));
+        assertThat(basket.total()).isEqualByComparingTo(expectedTotal);
     }
 }

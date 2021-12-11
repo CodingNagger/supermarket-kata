@@ -1,20 +1,12 @@
 package kata.supermarket;
 
+import lombok.Value;
+
 import java.math.BigDecimal;
 
+@Value
 public class Product {
-
-    private final BigDecimal pricePerUnit;
-
-    public Product(final BigDecimal pricePerUnit) {
-        this.pricePerUnit = pricePerUnit;
-    }
-
-    BigDecimal pricePerUnit() {
-        return pricePerUnit;
-    }
-
-    public Item oneOf() {
-        return new ItemByUnit(this);
-    }
+    String name;
+    BigDecimal pricePerUnit;
+    ProductUnit productUnit;
 }
